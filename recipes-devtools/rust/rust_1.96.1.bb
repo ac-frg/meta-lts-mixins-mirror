@@ -4,6 +4,10 @@ SECTION = "devel"
 LICENSE = "(MIT | Apache-2.0) & Unicode-3.0"
 LIC_FILES_CHKSUM = "file://COPYRIGHT;md5=11a3899825f4376896e438c8c753f8dc"
 
+require rust-source.inc
+require rust-snapshot.inc
+require common-source.inc
+
 inherit rust
 inherit cargo_common
 
@@ -21,6 +25,9 @@ INHIBIT_DEFAULT_RUST_DEPS:class-native = "1"
 PROVIDES:class-native = "virtual/${TARGET_PREFIX}rust"
 
 S = "${RUSTSRC}"
+# Separate build directory from the shared source tree so that multiple
+# variants (target, native, nativesdk) don't conflict in the source dir.
+B = "${WORKDIR}/build"
 
 # Use at your own risk, accepted values are stable, beta and nightly
 RUST_CHANNEL ?= "stable"
@@ -35,6 +42,9 @@ RUST_ALTERNATE_EXE_PATH_NATIVE = "${STAGING_LIBDIR_NATIVE}/llvm-rust/bin/llvm-co
 # own vendoring.
 CARGO_DISABLE_BITBAKE_VENDORING = "1"
 
+# Explicit CARGO_HOME avoids cargo caching in the shared source tree
+CARGO_HOME = "${WORKDIR}/cargo_home"
+
 setup_cargo_environment () {
     # The first step is to build bootstrap and some early stage tools,
     # these are build for the same target as the snapshot, e.g.
@@ -46,7 +56,7 @@ setup_cargo_environment () {
 inherit rust-target-config
 
 do_rust_setup_snapshot () {
-    for installer in "${WORKDIR}/rust-snapshot-components/"*"/install.sh"; do
+    for installer in "${UNPACKDIR}/rust-snapshot-components/"*"/install.sh"; do
         "${installer}" --prefix="${WORKDIR}/rust-snapshot" --disable-ldconfig
     done
 
@@ -63,11 +73,11 @@ do_rust_setup_snapshot () {
         done
     fi
 }
-addtask rust_setup_snapshot after do_unpack before do_configure
+addtask rust_setup_snapshot before do_configure
 addtask do_test_compile after do_configure do_rust_gen_targets
 do_rust_setup_snapshot[dirs] += "${WORKDIR}/rust-snapshot"
 do_rust_setup_snapshot[vardepsexclude] += "UNINATIVE_LOADER"
-do_rust_setup_snapshot[depends] += "patchelf-native:do_populate_sysroot"
+do_rust_setup_snapshot[depends] += "patchelf-native:do_populate_sysroot rust-source-${PV}:do_unpack"
 
 RUSTC_BOOTSTRAP = "${STAGING_BINDIR_NATIVE}/rustc"
 CARGO_BOOTSTRAP = "${STAGING_BINDIR_NATIVE}/cargo"
@@ -169,6 +179,12 @@ python do_configure() {
     # nothing about when trying to build some stage0 tools (like fabricate)
     config.set("build", "build", e(d.getVar("RUST_BUILD_SYS")))
 
+    # Yocto's B (${WORKDIR}/build) is where config.toml lives. Rust's
+    # bootstrap creates its own build output directory inside B; name it
+    # "rust-build" to avoid ambiguity with Yocto's build directory and
+    # prevent a confusing build/build/ nesting.
+    config.set("build", "build-dir", e("rust-build"))
+
     # [install]
     config.add_section("install")
     # ./x.py install doesn't have any notion of "destdir"
@@ -215,12 +231,9 @@ rust_runx () {
 
     oe_cargo_fix_env
 
-    python3 src/bootstrap/bootstrap.py ${@oe.utils.parallel_make_argument(d, '-j %d')} "$@" --verbose
+    python3 ${S}/src/bootstrap/bootstrap.py ${@oe.utils.parallel_make_argument(d, '-j %d')} "$@" --verbose
 }
 rust_runx[vardepsexclude] += "PARALLEL_MAKE"
-
-require rust-source.inc
-require rust-snapshot.inc
 
 INSANE_SKIP:${PN}:class-native = "already-stripped"
 FILES:${PN} += "${libdir}/rustlib"
@@ -232,7 +245,7 @@ do_compile () {
 
 do_test_compile[dirs] = "${B}"
 do_test_compile () {
-    rust_runx build src/tools/remote-test-server --target "${RUST_TARGET_SYS}"
+    rust_runx build ${S}/src/tools/remote-test-server --target "${RUST_TARGET_SYS}"
 }
 
 ALLOW_EMPTY:${PN} = "1"
@@ -273,7 +286,7 @@ rust_do_install:class-nativesdk() {
 
     install -d ${D}${bindir}
     for i in cargo-clippy clippy-driver rustfmt; do
-        cp build/${RUST_BUILD_SYS}/stage2-tools/${RUST_HOST_SYS}/release/$i ${D}${bindir}
+        cp rust-build/${RUST_BUILD_SYS}/stage2-tools/${RUST_HOST_SYS}/release/$i ${D}${bindir}
         patchelf --set-rpath "\$ORIGIN/../lib" ${D}${bindir}/$i
     done
 
@@ -313,7 +326,7 @@ rust_do_install:class-target() {
 
     install -d ${D}${bindir}
     for i in ${EXTRA_TOOLS}; do
-        cp build/${RUST_BUILD_SYS}/stage2-tools/${RUST_HOST_SYS}/release/$i ${D}${bindir}
+        cp rust-build/${RUST_BUILD_SYS}/stage2-tools/${RUST_HOST_SYS}/release/$i ${D}${bindir}
         patchelf --set-rpath "\$ORIGIN/../lib" ${D}${bindir}/$i
     done
 
