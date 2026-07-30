@@ -20,4 +20,4 @@ EXTRA_OECMAKE = "\
     -DREGEX_BACKEND='pcre2' \
 "
 
-BBCLASSEXTEND = "native"
+BBCLASSEXTEND = "native nativesdk"
