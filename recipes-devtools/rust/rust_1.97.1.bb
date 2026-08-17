@@ -308,6 +308,7 @@ rust_do_install:append:class-native() {
     install -d ${D}${libdir}/rustlib/src/rust
     cp -r ${S}/library ${D}${libdir}/rustlib/src/rust
     find ${D}${libdir}/rustlib/src/rust/ -name "*.sh" -type f -delete
+    find ${D}${libdir}/rustlib/src/rust/ -path "*/vendor/*.a" -type f -delete
 }
 
 rust_do_install:class-nativesdk() {
@@ -344,6 +345,7 @@ rust_do_install:class-nativesdk() {
     install -d ${D}${libdir}/rustlib/src/rust
     cp -r ${S}/library ${D}${libdir}/rustlib/src/rust
     find ${D}${libdir}/rustlib/src/rust/ -name "*.sh" -type f -delete
+    find ${D}${libdir}/rustlib/src/rust/ -path "*/vendor/*.a" -type f -delete
 
 }
 
@@ -368,6 +370,7 @@ rust_do_install:class-target() {
     install -d ${D}${libdir}/rustlib/src/rust
     cp -r ${S}/library ${D}${libdir}/rustlib/src/rust
     find ${D}${libdir}/rustlib/src/rust -name "*.sh" -type f -delete
+    find ${D}${libdir}/rustlib/src/rust/ -path "*/vendor/*.a" -type f -delete
     install -m 0644 ${WORKDIR}/rust-targets/${RUST_HOST_SYS}.json ${D}${libdir}/rustlib/${RUST_HOST_SYS}/${RUST_HOST_SYS}.json
 
 
