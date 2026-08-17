@@ -437,6 +437,11 @@ def rust_gen_target(d, thing, wd, arch):
     tspec['has-thread-local'] = True
     tspec['position-independent-executables'] = True
     tspec['panic-strategy'] = d.getVar("RUST_PANIC_STRATEGY")
+    # AArch64 AAPCS64 requires non-leaf frame pointers per
+    # https://github.com/ARM-software/abi-aa/blob/main/aapcs64/aapcs64.rst#the-frame-pointer
+    # This matches the upstream aarch64-unknown-linux-gnu target in rustc.
+    if arch == "aarch64":
+        tspec['frame-pointer'] = "non-leaf"
 
     # write out the target spec json file
     with open(wd + rustsys + '.json', 'w') as f:
