@@ -26,7 +26,7 @@ require ${BPN}-crates.inc
 SRC_URI += "file://0001-query-rustc-append-RUSTFLAGS-to-rustc-executable.patch \
             file://0001-tests-revert-Take-care-of-deprecated-assert_cmd-Comm.patch \
             file://run-ptest"
-SRC_URI[archive.sha256sum] = "7eb449b2722a768021356f66dfee3202c229b54ed4e6a70ce40c090e97ff16f2"
+SRC_URI[archive.sha256sum] = "cab7f7d1326fb001e4eb9f37990de66d4578a5f48465507471a69322d8b326e3"
 
 UPSTREAM_CHECK_REGEX = "librsvg-(?P<pver>\d+\.\d+\.(?!9\d+)\d+)"
 
